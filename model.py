@@ -5,7 +5,7 @@ import mysql.connector
 class Product:
     def __init__(self, name, price, garantie):
         self.name = name
-        self.price = price*100
+        self.price = round(price*100)
         self.garantie = garantie
 
     def save(self, cursor, date):
@@ -14,12 +14,12 @@ class Product:
         if product is None:
             cursor.execute("INSERT INTO Product (name, garantie) VALUES (%s, %s)", (self.name, self.garantie))
             product_id = cursor.lastrowid
-            cursor.execute("INSERT INTO PriceHistory (date, product_id, store_id, price) VALUE (%s, %s, 2, %s)", (date, product_id, self.price))
+            cursor.execute("INSERT IGNORE INTO PriceHistory (date, product_id, store_id, price) VALUE (%s, %s, 2, %s)", (date, product_id, self.price))
             return product_id
-        cursor.execute("SELECT price FROM PriceHistory WHERE product_id=%s ORDER BY date DESC LIMIT 1", (product[0],))
+        cursor.execute("SELECT price FROM PriceHistory WHERE product_id=%s ORDER BY date LIMIT 1", (product[0],))
         price = cursor.fetchone()
         if price[0] != self.price:
-            cursor.execute("INSERT INTO PriceHistory (date, product_id, store_id, price) VALUE (NOW(), %s, 2, %s)", (product[0], self.price))
+            cursor.execute("INSERT IGNORE INTO PriceHistory (date, product_id, store_id, price) VALUE (%s, %s, 2, %s)", (date, product[0], self.price))
         return product[0]
 
 class ShoppingList:
@@ -58,5 +58,4 @@ class ShoppingList:
         for product in self.products:
             p = product.save(self.cursor, self.date)
             self.cursor.execute("INSERT INTO RelationShoppingProduct (shopping_id, product_id) VALUE (%s, %s)", (shopping_id, p))
-
         self.conn.commit()
